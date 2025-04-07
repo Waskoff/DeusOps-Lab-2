@@ -1,0 +1,30 @@
+# Используем легковесный базовый образ на Alpine
+FROM python:3.9-alpine
+
+# Переменные окружения: отключаем буферизацию вывода и задаём домашнюю директорию приложения
+ENV PYTHONUNBUFFERED=1
+ENV APP_HOME=/app
+
+# Устанавливаем рабочую директорию
+WORKDIR $APP_HOME
+
+# Устанавливаем системные зависимости (компиляторы и библиотеки для работы с PostgreSQL)
+RUN apk update && apk add --no-cache gcc musl-dev postgresql-dev
+
+# Копируем файл зависимостей и устанавливаем их с очисткой кэша pip
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt && rm -rf /root/.cache
+
+# Создаем непривилегированного пользователя и переключаемся на него
+RUN adduser -D appuser
+USER appuser
+
+# Копируем исходный код приложения с корректной установкой прав
+COPY --chown=appuser:appuser . .
+
+# Открываем порт для приложения
+EXPOSE 5000
+
+# Запускаем приложение
+CMD ["python", "-m", "app.main"]
+
